@@ -45,7 +45,7 @@ dev = [
     "pre-commit",
 ]
 
-[project.entry-points."head_of_apache"]
+[project.scripts]
 head_of_apache = "head_of_apache.main:main"
 
 [project.urls]

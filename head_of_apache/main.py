@@ -271,7 +271,7 @@ def _main(paths, author, mapping, exclude, dry_run):
 @click.option(
     "-a",
     "--author",
-    default="Karlsruhe Institute of Technology",
+    required=True,
     help="The author to use in the license header.",
 )
 @click.option(
