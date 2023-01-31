@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=62.6.0", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["head_of_apache"]
+
+[tool.distutils.bdist_wheel]
+universal = true
+
+[project]
+name = "head_of_apache"
+description = "Small repo that adds or updates the Apache v2 license header to source code files of your project"
+readme = "README.md"
+authors = [{ name = "Luciano Paz", email = "luciano.paz@pymc-labs.io" }]
+requires-python = ">=3.8"
+
+dynamic = ["version"]
+
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: Apache Software License",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent"
+]
+
+dependencies = [
+    "Click>=8.0.0",
+    "thefuzz[speedup]",
+]
+
+[project.optional-dependencies]
+
+dev = [
+    "build",
+    "pytest==7.1.2",
+    "pytest-cov==4.0.0",
+    "pre-commit",
+]
+
+[project.entry-points."head_of_apache"]
+head_of_apache = "head_of_apache.main:main"
+
+[project.urls]
+
+repository = "https://github.com/lucianopaz/head_of_apache"
+
+[tool.setuptools_scm]
+write_to = "head_of_apache/_version.py"

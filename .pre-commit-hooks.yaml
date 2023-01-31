@@ -1,0 +1,5 @@
+- id: head_of_apache
+  name: Apply Apache 2.0 License
+  description: "Apply or update the Apache 2.0 License header to source files"
+  entry: head_of_apache
+  language: python
