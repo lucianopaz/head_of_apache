@@ -31,13 +31,11 @@ import os
 import re
 import shutil
 import tempfile
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 from pathlib import Path
-from thefuzz import fuzz
 
 import click
-
+from thefuzz import fuzz
 
 LICENSE_NOTICE = r"Copyright ([0-9]{4}|[0-9]{4}-|[0-9]{4}-[0-9]{4}) (?P<author>.+)"
 LICENSE = """{comment_start}Copyright {year} {author}
@@ -122,9 +120,10 @@ def get_files(paths, exclude=None, file_type_mapping=None):
     files = filter(
         to_keep,
         (
-            Path(file) for file in itertools.chain(*file_lists)
+            Path(file)
+            for file in itertools.chain(*file_lists)
             if not os.path.isdir(file)
-        )
+        ),
     )
     return list(files)
 
@@ -180,10 +179,11 @@ def _main(paths, author, mapping, exclude, dry_run):
                         matched_special_openning = True
                         special_openning_lines[key] = first_line
                         first_line = f.readline()
-            
+
             file_header = [first_line] + [
                 line if line.rstrip() else comment_style["comment_middle"] + "\n"
-                for i, line in enumerate(f) if i + 1 < n_lines
+                for i, line in enumerate(f)
+                if i + 1 < n_lines
             ]
 
             # Check whether license header is missing
@@ -219,7 +219,9 @@ def _main(paths, author, mapping, exclude, dry_run):
                 if not has_license_notice:
                     click.echo(f"No license header found in '{file}'.")
                 else:
-                    click.echo(f"Must update existing license header found in '{file}'.")
+                    click.echo(
+                        f"Must update existing license header found in '{file}'."
+                    )
             else:
                 with open(file, encoding="utf-8") as f:
                     file_content = f.readlines()
@@ -239,7 +241,7 @@ def _main(paths, author, mapping, exclude, dry_run):
                             "".join(
                                 file_content[
                                     len(license_header.split("\n"))
-                                    + len(special_openning_lines):
+                                    + len(special_openning_lines) :
                                 ]
                             )
                         )

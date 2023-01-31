@@ -21,7 +21,7 @@ repos:
     rev: v0.1.0
     hooks:
       - id: head_of_apache
-        args: 
+        args:
           - --author
           - name of author
           - --exclude
