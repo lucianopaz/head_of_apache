@@ -30,6 +30,7 @@ import itertools
 import os
 import re
 import shutil
+import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -302,4 +303,5 @@ def main(paths, author, mapping, exclude, dry_run):
 
 
 if __name__ == "__main__":
-    main()
+    exit_code = main()
+    sys.exit(exit_code)
