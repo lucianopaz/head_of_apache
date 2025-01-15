@@ -36,9 +36,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import click
-from thefuzz import fuzz
 
-LICENSE_NOTICE = r"Copyright ([0-9]{4}|[0-9]{4}-|[0-9]{4}-[0-9]{4}) (?P<author>.+)"
+DESIRED_LICENSE_NOTICE = r"Copyright (?P<years>\d{4}\s*-\s*\d{4}|\d{4}\s*-\s*present) (?P<author>.+)"
+SINGLE_DATE_LICENSE_NOTICE = r"Copyright (?P<years>\d{4}\s*|\d{4}\s*-\s*) (?P<author>.+)"
 LICENSE = """{comment_start}Copyright {year} {author}
 {comment_middle}
 {comment_middle}Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,6 +52,7 @@ LICENSE = """{comment_start}Copyright {year} {author}
 {comment_middle}WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 {comment_middle}See the License for the specific language governing permissions and
 {comment_middle}limitations under the License.{comment_end}"""
+LICENSE_LENGTH = len(LICENSE.splitlines())
 
 
 COMMENT_STYLES = {
@@ -129,6 +130,96 @@ def get_files(paths, exclude=None, file_type_mapping=None):
     return list(files)
 
 
+def get_license_header(author, year, comment_start, comment_middle, comment_end):
+    license_header = LICENSE.format(
+        author=author,
+        year=year,
+        comment_start=comment_start,
+        comment_middle=comment_middle,
+        comment_end=comment_end,
+    )
+    temp = [line.rstrip() for line in license_header.splitlines()]
+    license_header = "\n".join(temp)
+    return license_header
+
+
+def read_file_header_lines(f, comment_style, n_lines):
+    # Check if the first lines are shebangs or encodings
+    first_line = f.readline()
+    special_opennings = {
+        "shebanged": "#!",
+        "encoded": "# -*- coding:",
+    }
+    special_openning_lines = {}
+    matched_special_openning = True
+    while matched_special_openning:
+        matched_special_openning = False
+        for key, openning in special_opennings.items():
+            if key in special_openning_lines:
+                continue
+            if first_line.startswith(openning):
+                matched_special_openning = True
+                special_openning_lines[key] = first_line
+                first_line = f.readline()
+
+    file_header = [first_line] + [
+        line if line.rstrip() else comment_style["comment_middle"] + "\n"
+        for i, line in enumerate(f)
+        if i + 1 < n_lines
+    ]
+    return file_header, first_line, special_openning_lines
+
+def parse_license_years(years):
+    # years string adheres to this format:
+    # (?P<years>\d{4}\s*|\d{4}\s*-\s*|\d{4}\s*-\s*\d{4}|\d{4}\s*-\s*present)
+
+    split_years = years.split("-")
+    if len(split_years) == 1:
+        # Only the starting year format
+        start_year = split_years[0].strip()
+        end_year = ""
+        wrong_space_format = f"{start_year} " != split_years[0]
+    else:
+        assert len(split_years) == 2
+        start_year = split_years[0].strip()
+        end_year = split_years[1].strip()
+        wrong_space_format = (
+            f"{start_year} " != split_years[0]
+            and f" {end_year}" != split_years[0]
+        )
+    return start_year, end_year, wrong_space_format
+
+
+def validate_file_header(first_line, current_year, author):
+    # Check whether license header is missing
+    current_year = str(current_year)
+    license_notice = re.search(DESIRED_LICENSE_NOTICE, first_line)
+    if not license_notice:
+        license_notice = re.search(SINGLE_DATE_LICENSE_NOTICE, first_line)
+    if not license_notice:
+        has_license_notice = False
+        must_update_license_notice = True
+        start_year = current_year
+        end_year = current_year
+    elif license_notice.group("author") != author:
+        # There is an existing license under a different author. We must leave it there
+        # and prepend our own
+        has_license_notice = False
+        must_update_license_notice = True
+        start_year = current_year
+        end_year = current_year
+    else:
+        has_license_notice = True
+        start_year, end_year, wrong_space_format = parse_license_years(license_notice.group("years"))
+        if end_year not in {current_year, "present"}:
+            # The existing license years need to be updated
+            must_update_license_notice = True
+            end_year = current_year
+        else:
+            must_update_license_notice = wrong_space_format
+    return has_license_notice, must_update_license_notice, start_year, end_year
+
+
 def _main(paths, author, mapping, exclude, dry_run):
     """Check for Apache 2.0 license headers in one or multiple files.
 
@@ -152,67 +243,18 @@ def _main(paths, author, mapping, exclude, dry_run):
         # Check the file for an existing header.
         with open(file, mode="r+", encoding="utf-8") as f:
             # Create the fitting license header for the current file.
-            license_header = LICENSE.format(
-                author=author,
-                year=datetime.now(timezone.utc).year,
-                comment_start=comment_style["comment_start"],
-                comment_middle=comment_style["comment_middle"],
-                comment_end=comment_style["comment_end"],
+            current_year = f"{datetime.now(timezone.utc).year}"
+
+            _, first_line, special_openning_lines = read_file_header_lines(
+                f, comment_style, LICENSE_LENGTH
             )
-            temp = [line.rstrip() for line in license_header.split("\n")]
-            n_lines = len(temp)
-            license_header = "\n".join(temp)
-
-            # Check if the first lines are shebangs or encodings
-            first_line = f.readline()
-            special_opennings = {
-                "shebanged": "#!",
-                "encoded": "# -*- coding:",
-            }
-            special_openning_lines = {}
-            matched_special_openning = True
-            while matched_special_openning:
-                matched_special_openning = False
-                for key, openning in special_opennings.items():
-                    if key in special_openning_lines:
-                        continue
-                    if first_line.startswith(openning):
-                        matched_special_openning = True
-                        special_openning_lines[key] = first_line
-                        first_line = f.readline()
-
-            file_header = [first_line] + [
-                line if line.rstrip() else comment_style["comment_middle"] + "\n"
-                for i, line in enumerate(f)
-                if i + 1 < n_lines
-            ]
 
             # Check whether license header is missing
-            license_notice = re.search(LICENSE_NOTICE, first_line)
-            if not license_notice:
-                has_license_notice = False
-                must_update_license_notice = True
-            elif license_notice.group("author") != author:
-                # There is an existing license under a different author. We must leave it there
-                # and prepend our own
-                has_license_notice = False
-                must_update_license_notice = True
-            else:
-                ratios = [
-                    fuzz.ratio(file_line.rstrip(), license_line)
-                    for file_line, license_line in itertools.zip_longest(
-                        file_header, license_header.split("\n"), fillvalue="\n"
-                    )
-                ]
-                if all(ratio == 100 for ratio in ratios):
-                    has_license_notice = True
-                    must_update_license_notice = False
-                elif all(ratio > 92 for ratio in ratios):
-                    has_license_notice = True
-                    must_update_license_notice = True
-                else:
-                    has_license_notice = False
-                    must_update_license_notice = True
+            (
+                has_license_notice, must_update_license_notice, start_year, end_year
+            ) = validate_file_header(
+                first_line=first_line, current_year=current_year, author=author
+            )
 
         if not has_license_notice or must_update_license_notice:
             exit_status = 1
@@ -224,6 +266,9 @@ def _main(paths, author, mapping, exclude, dry_run):
                         f"Must update existing license header found in '{file}'."
                     )
             else:
+                license_header = get_license_header(
+                    author, f"{start_year} - {end_year}", **comment_style
+                )
                 with open(file, encoding="utf-8") as f:
                     file_content = f.readlines()
 

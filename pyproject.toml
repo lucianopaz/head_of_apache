@@ -12,7 +12,7 @@ universal = true
 name = "head_of_apache"
 description = "Small repo that adds or updates the Apache v2 license header to source code files of your project"
 readme = "README.md"
-authors = [{ name = "Luciano Paz", email = "luciano.paz@pymc-labs.io" }]
+authors = [{ name = "Luciano Paz", email = "luciano.paz@pymc-labs.com" }]
 requires-python = ">=3.8"
 
 dynamic = ["version"]
@@ -33,7 +33,6 @@ classifiers = [
 
 dependencies = [
     "Click>=8.0.0",
-    "thefuzz[speedup]",
 ]
 
 [project.optional-dependencies]
