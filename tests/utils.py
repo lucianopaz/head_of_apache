@@ -20,8 +20,11 @@ def render_file_contents(
     has_license,
 ):
     header = LICENSE.format(
-        year=year or "", author=author or "", comment_start=comment_start,
-        comment_middle=comment_middle, comment_end=comment_end,
+        year=year or "",
+        author=author or "",
+        comment_start=comment_start,
+        comment_middle=comment_middle,
+        comment_end=comment_end,
     )
     content = ""
     if has_license:
@@ -93,6 +96,7 @@ bad_file_no_header = partial(
     has_license=False,
 )
 
+
 def bad_file_mit_header(comment_start, comment_middle, comment_end):
     mit_license = """{comment_start}MIT License
 {comment_middle}
@@ -160,7 +164,10 @@ def expected_headers(name, comment_style):
     n_lines = len(LICENSE.splitlines())
     offset = 0
     content = content_creator_function(**comment_style)
-    if comment_style["comment_start"].startswith("#") and content_creator == "good_file_with_special_opening":
+    if (
+        comment_style["comment_start"].startswith("#")
+        and content_creator == "good_file_with_special_opening"
+    ):
         offset = 2
         special_openning_lines = {
             "shebanged": "#!/bin/python\n",

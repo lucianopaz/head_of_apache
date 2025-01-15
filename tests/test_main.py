@@ -1,4 +1,3 @@
-import glob
 import pytest
 import tempfile
 import pathlib
@@ -66,17 +65,24 @@ def single_file(request, file_structure, file_extension, comment_style):
 
 
 def test_get_files(file_extension, file_structure, exclude):
-    files = get_files([file_structure], exclude=[file_structure / exclude] if exclude else None)
+    files = get_files(
+        [file_structure], exclude=[file_structure / exclude] if exclude else None
+    )
     expected = [file_structure / f"{fname}.{file_extension}" for fname in good_fnames]
     if not exclude:
-        expected.extend([file_structure / "bad_files" / f"{fname}.{file_extension}" for fname in bad_fnames])
+        expected.extend(
+            [
+                file_structure / "bad_files" / f"{fname}.{file_extension}"
+                for fname in bad_fnames
+            ]
+        )
     assert set(files) == set(expected)
 
 
 def test_read_file_header_lines(single_file, comment_style):
-    (
-        path, expected_header, expected_first_line, expected_special_openning_lines
-    ) = single_file
+    (path, expected_header, expected_first_line, expected_special_openning_lines) = (
+        single_file
+    )
     with open(path, "r") as file_obj:
         file_header, first_line, special_openning_lines = read_file_header_lines(
             file_obj, comment_style=comment_style, n_lines=LICENSE_LENGTH
@@ -88,17 +94,23 @@ def test_read_file_header_lines(single_file, comment_style):
 
 def test_main(file_structure, comment_style, exclude):
     _main(
-        paths=[file_structure], author=GOOD_AUTHOR, mapping=[], exclude=[file_structure / exclude] if exclude else None, dry_run=False
+        paths=[file_structure],
+        author=GOOD_AUTHOR,
+        mapping=[],
+        exclude=[file_structure / exclude] if exclude else None,
+        dry_run=False,
     )
-    for file in get_files([file_structure], exclude=[file_structure / exclude] if exclude else None):
+    for file in get_files(
+        [file_structure], exclude=[file_structure / exclude] if exclude else None
+    ):
         with open(file, "r") as f:
             file_header, first_line, special_openning_lines = read_file_header_lines(
                 f, comment_style=comment_style, n_lines=LICENSE_LENGTH
             )
-        (
-            has_license_notice, must_update_license_notice, start_year, end_year
-        ) = validate_file_header(
-            first_line=first_line, current_year=CURRENT_YEAR, author=GOOD_AUTHOR
+        (has_license_notice, must_update_license_notice, start_year, end_year) = (
+            validate_file_header(
+                first_line=first_line, current_year=CURRENT_YEAR, author=GOOD_AUTHOR
+            )
         )
         expected_license = get_license_header(
             author=GOOD_AUTHOR, year=f"{start_year} - {end_year}", **comment_style
