@@ -37,8 +37,12 @@ from pathlib import Path
 
 import click
 
-DESIRED_LICENSE_NOTICE = r"Copyright (?P<years>\d{4}\s*-\s*\d{4}|\d{4}\s*-\s*present) (?P<author>.+)"
-SINGLE_DATE_LICENSE_NOTICE = r"Copyright (?P<years>\d{4}\s*|\d{4}\s*-\s*) (?P<author>.+)"
+DESIRED_LICENSE_NOTICE = (
+    r"Copyright (?P<years>\d{4}\s*-\s*\d{4}|\d{4}\s*-\s*present) (?P<author>.+)"
+)
+SINGLE_DATE_LICENSE_NOTICE = (
+    r"Copyright (?P<years>\d{4}\s*|\d{4}\s*-\s*) (?P<author>.+)"
+)
 LICENSE = """{comment_start}Copyright {year} {author}
 {comment_middle}
 {comment_middle}Licensed under the Apache License, Version 2.0 (the "License");
@@ -169,6 +173,7 @@ def read_file_header_lines(f, comment_style, n_lines):
     ]
     return file_header, first_line, special_openning_lines
 
+
 def parse_license_years(years):
     # years string adheres to this format:
     # (?P<years>\d{4}\s*|\d{4}\s*-\s*|\d{4}\s*-\s*\d{4}|\d{4}\s*-\s*present)
@@ -184,8 +189,7 @@ def parse_license_years(years):
         start_year = split_years[0].strip()
         end_year = split_years[1].strip()
         wrong_space_format = (
-            f"{start_year} " != split_years[0]
-            and f" {end_year}" != split_years[0]
+            f"{start_year} " != split_years[0] and f" {end_year}" != split_years[0]
         )
     return start_year, end_year, wrong_space_format
 
@@ -210,7 +214,9 @@ def validate_file_header(first_line, current_year, author):
         end_year = current_year
     else:
         has_license_notice = True
-        start_year, end_year, wrong_space_format = parse_license_years(license_notice.group("years"))
+        start_year, end_year, wrong_space_format = parse_license_years(
+            license_notice.group("years")
+        )
         if end_year not in {current_year, "present"}:
             # The existing license years need to be updated
             must_update_license_notice = True
@@ -250,10 +256,10 @@ def _main(paths, author, mapping, exclude, dry_run):
             )
 
             # Check whether license header is missing
-            (
-                has_license_notice, must_update_license_notice, start_year, end_year
-            ) = validate_file_header(
-                first_line=first_line, current_year=current_year, author=author
+            (has_license_notice, must_update_license_notice, start_year, end_year) = (
+                validate_file_header(
+                    first_line=first_line, current_year=current_year, author=author
+                )
             )
 
         if not has_license_notice or must_update_license_notice:
