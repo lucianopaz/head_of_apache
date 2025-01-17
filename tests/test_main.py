@@ -55,13 +55,13 @@ def exclude(request):
 
 
 @pytest.fixture(scope="function", params=good_fnames + bad_fnames)
-def single_file(request, file_structure, file_extension, comment_style):
+def single_file(request, file_extension, comment_style):
     fname = request.param
-    if fname.startswith("bad"):
-        path = file_structure / "bad_files" / f"{fname}.{file_extension}"
-    else:
-        path = file_structure / f"{fname}.{file_extension}"
-    return (path, *expected_headers(fname, comment_style=comment_style))
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = pathlib.Path(tempdir) / f"{fname}.{file_extension}"
+        with open(path, "w") as f:
+            f.write(getattr(utils, fname)(**comment_style))
+        yield (path, *expected_headers(fname, comment_style=comment_style))
 
 
 def test_get_files(file_extension, file_structure, exclude):
@@ -92,29 +92,27 @@ def test_read_file_header_lines(single_file, comment_style):
     assert special_openning_lines == expected_special_openning_lines
 
 
-def test_main(file_structure, comment_style, exclude):
+def test_main(single_file, comment_style):
+    path, *_ = single_file
     _main(
-        paths=[file_structure],
+        paths=[path],
         author=GOOD_AUTHOR,
         mapping=[],
-        exclude=[file_structure / exclude] if exclude else None,
+        exclude=None,
         dry_run=False,
     )
-    for file in get_files(
-        [file_structure], exclude=[file_structure / exclude] if exclude else None
-    ):
-        with open(file, "r") as f:
-            file_header, first_line, special_openning_lines = read_file_header_lines(
-                f, comment_style=comment_style, n_lines=LICENSE_LENGTH
-            )
-        (has_license_notice, must_update_license_notice, start_year, end_year) = (
-            validate_file_header(
-                first_line=first_line, current_year=CURRENT_YEAR, author=GOOD_AUTHOR
-            )
+    with open(path, "r") as f:
+        file_header, first_line, special_openning_lines = read_file_header_lines(
+            f, comment_style=comment_style, n_lines=LICENSE_LENGTH
         )
-        expected_license = get_license_header(
-            author=GOOD_AUTHOR, year=f"{start_year} - {end_year}", **comment_style
+    (has_license_notice, must_update_license_notice, start_year, end_year) = (
+        validate_file_header(
+            first_line=first_line, current_year=CURRENT_YEAR, author=GOOD_AUTHOR
         )
-        assert "\n".join([line.rstrip() for line in file_header]) == expected_license
-        assert has_license_notice
-        assert not must_update_license_notice
+    )
+    expected_license = get_license_header(
+        author=GOOD_AUTHOR, year=f"{start_year} - {end_year}", **comment_style
+    )
+    assert "\n".join([line.rstrip() for line in file_header]) == expected_license
+    assert has_license_notice
+    assert not must_update_license_notice
