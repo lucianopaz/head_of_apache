@@ -304,7 +304,7 @@ def _main(paths, author, mapping, exclude, dry_run):
 
                     # Copy the metadata of the original file, if supported.
                     shutil.copystat(file, tmp_file.name)
-                    os.rename(tmp_file.name, file)
+                    os.replace(tmp_file.name, file)
 
                     if not has_license_notice:
                         click.echo(f"Applied license header to '{file}'.")
