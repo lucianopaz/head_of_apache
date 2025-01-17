@@ -39,8 +39,8 @@ dependencies = [
 
 dev = [
     "build",
-    "pytest==7.1.2",
-    "pytest-cov==4.0.0",
+    "pytest",
+    "pytest-cov",
     "pre-commit",
 ]
 
@@ -53,3 +53,7 @@ repository = "https://github.com/lucianopaz/head_of_apache"
 
 [tool.setuptools_scm]
 write_to = "head_of_apache/_version.py"
+
+[tool.pytest.ini_options]
+addopts = "-vv --cov=head_of_apache --cov-report term-missing"
+testpaths = ["tests"]
