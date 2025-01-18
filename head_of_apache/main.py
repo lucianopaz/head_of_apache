@@ -194,7 +194,7 @@ def parse_license_years(years):
     return start_year, end_year, wrong_space_format
 
 
-def validate_file_header(first_line, current_year, author):
+def validate_file_header(first_line, current_year, author, last_year_present):
     # Check whether license header is missing
     current_year = str(current_year)
     license_notice = re.search(DESIRED_LICENSE_NOTICE, first_line)
@@ -204,29 +204,31 @@ def validate_file_header(first_line, current_year, author):
         has_license_notice = False
         must_update_license_notice = True
         start_year = current_year
-        end_year = current_year
+        end_year = current_year if not last_year_present else "present"
     elif license_notice.group("author") != author:
         # There is an existing license under a different author. We must leave it there
         # and prepend our own
         has_license_notice = False
         must_update_license_notice = True
         start_year = current_year
-        end_year = current_year
+        end_year = current_year if not last_year_present else "present"
     else:
         has_license_notice = True
         start_year, end_year, wrong_space_format = parse_license_years(
             license_notice.group("years")
         )
-        if end_year not in {current_year, "present"}:
+        if (end_year != current_year and not last_year_present) or (
+            end_year != "present" and last_year_present
+        ):
             # The existing license years need to be updated
             must_update_license_notice = True
-            end_year = current_year
+            end_year = current_year if not last_year_present else "present"
         else:
             must_update_license_notice = wrong_space_format
     return has_license_notice, must_update_license_notice, start_year, end_year
 
 
-def _main(paths, author, mapping, exclude, dry_run):
+def _main(paths, author, mapping, exclude, dry_run, last_year_present):
     """Check for Apache 2.0 license headers in one or multiple files.
 
     The given paths can be either single files and/or directories that will be searched
@@ -258,7 +260,10 @@ def _main(paths, author, mapping, exclude, dry_run):
             # Check whether license header is missing
             (has_license_notice, must_update_license_notice, start_year, end_year) = (
                 validate_file_header(
-                    first_line=first_line, current_year=current_year, author=author
+                    first_line=first_line,
+                    current_year=current_year,
+                    author=author,
+                    last_year_present=last_year_present,
                 )
             )
 
@@ -349,8 +354,14 @@ def _main(paths, author, mapping, exclude, dry_run):
     is_flag=True,
     help="Notify about missing license headers, but do not apply them.",
 )
-def main(paths, author, mapping, exclude, dry_run):
-    return _main(paths, author, mapping, exclude, dry_run)
+@click.option(
+    "-l",
+    "--last-year-present",
+    is_flag=True,
+    help="If set, the license last year is set to 'present'.",
+)
+def main(paths, author, mapping, exclude, dry_run, last_year_present):
+    return _main(paths, author, mapping, exclude, dry_run, last_year_present)
 
 
 if __name__ == "__main__":

@@ -54,6 +54,11 @@ def exclude(request):
     return "bad_files" if request.param == "exclude" else None
 
 
+@pytest.fixture(params=[True, False])
+def last_year_present(request):
+    return request.param
+
+
 @pytest.fixture(scope="function", params=good_fnames + bad_fnames)
 def single_file(request, file_extension, comment_style):
     fname = request.param
@@ -92,7 +97,7 @@ def test_read_file_header_lines(single_file, comment_style):
     assert special_openning_lines == expected_special_openning_lines
 
 
-def test_main(single_file, comment_style):
+def test_main(single_file, comment_style, last_year_present):
     path, *_ = single_file
     _main(
         paths=[path],
@@ -100,6 +105,7 @@ def test_main(single_file, comment_style):
         mapping=[],
         exclude=None,
         dry_run=False,
+        last_year_present=last_year_present,
     )
     with open(path, "r") as f:
         file_header, first_line, special_openning_lines = read_file_header_lines(
@@ -107,9 +113,13 @@ def test_main(single_file, comment_style):
         )
     (has_license_notice, must_update_license_notice, start_year, end_year) = (
         validate_file_header(
-            first_line=first_line, current_year=CURRENT_YEAR, author=GOOD_AUTHOR
+            first_line=first_line,
+            current_year=CURRENT_YEAR,
+            author=GOOD_AUTHOR,
+            last_year_present=last_year_present,
         )
     )
+    end_year = "present" if last_year_present else CURRENT_YEAR
     expected_license = get_license_header(
         author=GOOD_AUTHOR, year=f"{start_year} - {end_year}", **comment_style
     )
