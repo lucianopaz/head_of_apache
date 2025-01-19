@@ -338,15 +338,6 @@ parser = argparse.ArgumentParser(
     ),
 )
 parser.add_argument(
-    "paths",
-    nargs="+",
-    type=Path,
-    help=(
-        "Paths in which to look for source code files to apply the Apache license "
-        "header",
-    ),
-)
-parser.add_argument(
     "-a",
     "--author",
     required=True,
@@ -385,12 +376,22 @@ parser.add_argument(
     action="store_true",
     help="If set, the license last year is set to 'present'.",
 )
+parser.add_argument(
+    "paths",
+    nargs="*",
+    type=Path,
+    help=(
+        "Paths in which to look for source code files to apply the Apache license "
+        "header. If none is provided, the current working directory is used."
+    ),
+)
 
 
 def main(args=None):
-    args = args or sys.argv
     parsed_args = parser.parse_args(args)
     paths: list[Path] = parsed_args.paths
+    if not paths:
+        paths = [Path(os.curdir)]
     for path in paths:
         assert path.exists(), f"The supplied {path=} does not exist."
     author: str = parsed_args.author
@@ -402,5 +403,5 @@ def main(args=None):
 
 
 if __name__ == "__main__":
-    exit_code = main(sys.argv)  # pragma: no cover
+    exit_code = main()  # pragma: no cover
     sys.exit(exit_code)  # pragma: no cover
