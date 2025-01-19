@@ -1,16 +1,16 @@
-# Copyright 2023 Luciano Paz
+#   Copyright 2023 - present Luciano Paz
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#       http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
 
 # Copyright 2022 Karlsruhe Institute of Technology
 #
@@ -25,6 +25,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import argparse
 import glob
 import itertools
 import os
@@ -35,13 +36,12 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-import click
 
 DESIRED_LICENSE_NOTICE = (
-    r"Copyright (?P<years>\d{4}\s*-\s*\d{4}|\d{4}\s*-\s*present) (?P<author>.+)"
+    r"Copyright (?P<years>\d{4}\s*-\s*\d{4}|\d{4}\s*-\s*present) (?P<author>[A-Za-z].*)"
 )
 SINGLE_DATE_LICENSE_NOTICE = (
-    r"Copyright (?P<years>\d{4}\s*|\d{4}\s*-\s*) (?P<author>.+)"
+    r"Copyright (?P<years>\d{4}\s*|\d{4}\s*-\s*) (?P<author>[A-Za-z].*)"
 )
 LICENSE = """{comment_start}Copyright {year} {author}
 {comment_middle}
@@ -194,7 +194,7 @@ def parse_license_years(years):
     return start_year, end_year, wrong_space_format
 
 
-def validate_file_header(first_line, current_year, author):
+def validate_file_header(first_line, current_year, author, last_year_present):
     # Check whether license header is missing
     current_year = str(current_year)
     license_notice = re.search(DESIRED_LICENSE_NOTICE, first_line)
@@ -204,34 +204,38 @@ def validate_file_header(first_line, current_year, author):
         has_license_notice = False
         must_update_license_notice = True
         start_year = current_year
-        end_year = current_year
+        end_year = current_year if not last_year_present else "present"
     elif license_notice.group("author") != author:
         # There is an existing license under a different author. We must leave it there
         # and prepend our own
         has_license_notice = False
         must_update_license_notice = True
         start_year = current_year
-        end_year = current_year
+        end_year = current_year if not last_year_present else "present"
     else:
         has_license_notice = True
         start_year, end_year, wrong_space_format = parse_license_years(
             license_notice.group("years")
         )
-        if end_year not in {current_year, "present"}:
+        if (end_year != current_year and not last_year_present) or (
+            end_year != "present" and last_year_present
+        ):
             # The existing license years need to be updated
             must_update_license_notice = True
-            end_year = current_year
+            end_year = current_year if not last_year_present else "present"
         else:
             must_update_license_notice = wrong_space_format
     return has_license_notice, must_update_license_notice, start_year, end_year
 
 
-def _main(paths, author, mapping, exclude, dry_run):
+def _main(paths, author, mapping, exclude, dry_run, last_year_present):
     """Check for Apache 2.0 license headers in one or multiple files.
 
     The given paths can be either single files and/or directories that will be searched
     recursively for suitable file types to apply the header on.
     """
+    if os.name == "nt":
+        os.system("color")
     file_type_mappings = FILE_TYPE_MAPPING.copy()
     mapping = mapping or {}
     for file_type, style in mapping:
@@ -258,7 +262,10 @@ def _main(paths, author, mapping, exclude, dry_run):
             # Check whether license header is missing
             (has_license_notice, must_update_license_notice, start_year, end_year) = (
                 validate_file_header(
-                    first_line=first_line, current_year=current_year, author=author
+                    first_line=first_line,
+                    current_year=current_year,
+                    author=author,
+                    last_year_present=last_year_present,
                 )
             )
 
@@ -266,10 +273,11 @@ def _main(paths, author, mapping, exclude, dry_run):
             exit_status = 1
             if dry_run:
                 if not has_license_notice:
-                    click.echo(f"No license header found in '{file}'.")
+                    print(f"No license header found in '{file}'.", file=sys.stdout)
                 else:
-                    click.echo(
-                        f"Must update existing license header found in '{file}'."
+                    print(
+                        f"Must update existing license header found in '{file}'.",
+                        file=sys.stdout,
                     )
             else:
                 license_header = get_license_header(
@@ -307,52 +315,91 @@ def _main(paths, author, mapping, exclude, dry_run):
                     os.replace(tmp_file.name, file)
 
                     if not has_license_notice:
-                        click.echo(f"Applied license header to '{file}'.")
+                        print(f"Applied license header to '{file}'.", file=sys.stdout)
                     else:
-                        click.echo(f"Updated license header in '{file}'.")
-                except Exception as e:
-                    click.secho(str(e), fg="red")
+                        print(f"Updated license header in '{file}'.", file=sys.stdout)
+                except Exception as e:  # pragma: no cover
+                    print(
+                        f"\033[91m{e}\033[0m", fg="red", file=sys.stdout
+                    )  # pragma: no cover
 
-                    try:
-                        os.remove(tmp_file.name)
-                    except FileNotFoundError:
-                        pass
+                    try:  # pragma: no cover
+                        os.remove(tmp_file.name)  # pragma: no cover
+                    except FileNotFoundError:  # pragma: no cover
+                        pass  # pragma: no cover
     return exit_status
 
 
-@click.command()
-@click.argument("paths", type=click.Path(exists=True), nargs=-1)
-@click.option(
+parser = argparse.ArgumentParser(
+    prog="head_of_apache",
+    description=(
+        "Add or update the Apache v2 license header to source code files in the "
+        "desired path."
+    ),
+)
+parser.add_argument(
+    "paths",
+    nargs="+",
+    type=Path,
+    help=(
+        "Paths in which to look for source code files to apply the Apache license "
+        "header",
+    ),
+)
+parser.add_argument(
     "-a",
     "--author",
     required=True,
     help="The author to use in the license header.",
 )
-@click.option(
+parser.add_argument(
     "-m",
     "--mapping",
     nargs=2,
-    multiple=True,
-    help="Overwrite existing or add additional file types to the default file/comment"
-    " style mapping.",
+    action="append",
+    help=(
+        "Overwrite existing or add additional file types to the default file/comment"
+        " style mapping. Possible comment styles are 'asterisk', 'hash', 'html' and "
+        "'jinja'."
+    ),
 )
-@click.option(
+parser.add_argument(
     "-x",
     "--exclude",
-    multiple=True,
-    help="A path to exclude. A file will be excluded if it starts with the given path."
-    " Can be specified more than once.",
+    action="append",
+    help=(
+        "A path to exclude. A file will be excluded if it starts with the given path."
+        " Can be specified more than once."
+    ),
+    type=Path,
 )
-@click.option(
+parser.add_argument(
     "-d",
     "--dry-run",
-    is_flag=True,
+    action="store_true",
     help="Notify about missing license headers, but do not apply them.",
 )
-def main(paths, author, mapping, exclude, dry_run):
-    return _main(paths, author, mapping, exclude, dry_run)
+parser.add_argument(
+    "-l",
+    "--last-year-present",
+    action="store_true",
+    help="If set, the license last year is set to 'present'.",
+)
+
+
+def main(args):
+    parsed_args = parser.parse_args(args)
+    paths: list[Path] = parsed_args.paths
+    for path in paths:
+        assert path.exists(), f"The supplied {path=} does not exist."
+    author: str = parsed_args.author
+    mapping: list[tuple] = parsed_args.mapping
+    exclude: list[Path] = parsed_args.exclude
+    dry_run: bool = parsed_args.dry_run
+    last_year_present: bool = parsed_args.last_year_present
+    return _main(paths, author, mapping, exclude, dry_run, last_year_present)
 
 
 if __name__ == "__main__":
-    exit_code = main()
-    sys.exit(exit_code)
+    exit_code = main(sys.argv)  # pragma: no cover
+    sys.exit(exit_code)  # pragma: no cover

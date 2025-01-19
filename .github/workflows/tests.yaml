@@ -74,10 +74,9 @@ jobs:
       - name: Run tests
         run: |
           python -m pytest -vv --cov=head_of_apache --cov-report=xml --no-cov-on-fail --cov-report term-missing
-    #   - name: Upload coverage to Codecov
-    #     uses: codecov/codecov-action@v4
-    #     with:
-    #       token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
-    #       env_vars: TEST_SUBSET
-    #       name: ${{ matrix.os }} ${{ matrix.python-version }}
-    #       fail_ci_if_error: false
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
+          name: ${{ matrix.os }} ${{ matrix.python-version }}
+          fail_ci_if_error: false
