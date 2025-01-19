@@ -186,20 +186,40 @@ def test_main(single_file, comment_style, last_year_present, dry_run, capsys):
             assert not must_update_license_notice
 
 
+@pytest.fixture(scope="function", params=["path", "multi-path", "empty"])
+def cli_path(request):
+    if request.param == "path":
+        with tempfile.TemporaryDirectory() as dir1:
+            yield [dir1]
+    elif request.param == "multi-path":
+        dir1 = tempfile.TemporaryDirectory()
+        dir2 = tempfile.TemporaryDirectory()
+        yield [dir1.name, dir2.name]
+        dir1.cleanup()
+        dir2.cleanup()
+    else:
+        yield []
+
+
 @patch("head_of_apache.main._main")
-def test_cli(patched_main, file_structure, exclude, dry_run, last_year_present):
-    args_list = [f"{file_structure} --author {GOOD_AUTHOR}"]
+def test_cli(patched_main, cli_path, exclude, dry_run, last_year_present):
+    args_list = [f"--author {GOOD_AUTHOR}"]
     if exclude is not None:
-        exclude = file_structure / exclude
         args_list.append(f"--exclude {exclude}")
+        exclude = pathlib.Path(exclude)
     if dry_run:
         args_list.append("--dry-run")
     if last_year_present:
         args_list.append("--last-year-present")
+    if len(cli_path) > 0:
+        args_list.extend(cli_path)
+        paths = [pathlib.Path(path) for path in cli_path]
+    else:
+        paths = [pathlib.Path(os.curdir)]
     args = (" ".join(args_list)).split()
     main(args)
     patched_main.assert_called_once_with(
-        [file_structure],
+        paths,
         GOOD_AUTHOR,
         None,
         [exclude] if exclude is not None else None,
