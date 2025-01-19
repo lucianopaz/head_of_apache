@@ -1,4 +1,7 @@
 # head_of_apache
+
+[![codecov](https://codecov.io/gh/lucianopaz/head_of_apache/graph/badge.svg?token=UPPWYIZ01E)](https://codecov.io/gh/lucianopaz/head_of_apache)
+
 Small repo that adds or updates the Apache v2 license header to source code files of your project
 
 The code is mostly taken from the [IAM-CMS pre-commit-hooks project](https://gitlab.com/iam-cms/pre-commit-hooks). The major changes were that the license header is fuzzily matched, meaning that if the year changes, the license header will be updated inplace instead of being prepended to the previous header.
