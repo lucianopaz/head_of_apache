@@ -387,7 +387,8 @@ parser.add_argument(
 )
 
 
-def main(args):
+def main(args=None):
+    args = args or sys.argv
     parsed_args = parser.parse_args(args)
     paths: list[Path] = parsed_args.paths
     for path in paths:
