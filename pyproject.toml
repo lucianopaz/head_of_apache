@@ -31,9 +31,7 @@ classifiers = [
     "Operating System :: OS Independent"
 ]
 
-dependencies = [
-    "Click>=8.0.0",
-]
+dependencies = []
 
 [project.optional-dependencies]
 
