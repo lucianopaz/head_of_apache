@@ -13,11 +13,10 @@
 #   limitations under the License.
 import pathlib
 import sys
-
-from functools import partial
 from datetime import datetime, timezone
-from head_of_apache.main import LICENSE
+from functools import partial
 
+from head_of_apache.main import LICENSE
 
 GOOD_AUTHOR = "person"
 BAD_AUTHOR = "god"

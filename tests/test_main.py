@@ -11,33 +11,35 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import pytest
-import tempfile
+import os
 import pathlib
 import re
-import os
+import tempfile
 from unittest.mock import patch
 
+import pytest
+
 from head_of_apache.main import (
-    get_files,
-    get_license_header,
-    read_file_header_lines,
-    validate_file_header,
-    _main,
-    main,
-    parse_license_years,
     COMMENT_STYLES,
     DESIRED_LICENSE_NOTICE,
     FILE_TYPE_MAPPING,
     LICENSE_LENGTH,
+    _main,
+    get_files,
+    get_license_header,
+    main,
+    parse_license_years,
+    read_file_header_lines,
+    validate_file_header,
 )
+
 from . import utils
 from .utils import (
-    GOOD_AUTHOR,
     CURRENT_YEAR,
+    GOOD_AUTHOR,
+    bad_fnames,
     expected_headers,
     good_fnames,
-    bad_fnames,
 )
 
 
