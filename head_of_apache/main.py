@@ -36,7 +36,6 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-
 DESIRED_LICENSE_NOTICE = (
     r"Copyright (?P<years>\d{4}\s*-\s*\d{4}|\d{4}\s*-\s*present) (?P<author>[A-Za-z].*)"
 )
