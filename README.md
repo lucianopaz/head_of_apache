@@ -21,7 +21,7 @@ To run the pre-commit hook, you must pass the following configuration:
 ```yaml
 repos:
   - repo: https://github.com/lucianopaz/head_of_apache
-    rev: "0.1.0"
+    rev: "0.1.1"
     hooks:
       - id: head_of_apache
         args:
