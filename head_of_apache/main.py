@@ -194,7 +194,13 @@ def parse_license_years(years):
     return start_year, end_year, wrong_space_format
 
 
-def validate_file_header(first_line, current_year, author, last_year_present):
+def validate_file_header(
+    first_line,
+    current_year,
+    author,
+    last_year_present,
+    start_year_override: str | None = None,
+):
     # Check whether license header is missing
     current_year = str(current_year)
     license_notice = re.search(DESIRED_LICENSE_NOTICE, first_line)
@@ -203,32 +209,43 @@ def validate_file_header(first_line, current_year, author, last_year_present):
     if not license_notice:
         has_license_notice = False
         must_update_license_notice = True
-        start_year = current_year
+        start_year = start_year_override or current_year
         end_year = current_year if not last_year_present else "present"
     elif license_notice.group("author") != author:
         # There is an existing license under a different author. We must leave it there
         # and prepend our own
         has_license_notice = False
         must_update_license_notice = True
-        start_year = current_year
+        start_year = start_year_override or current_year
         end_year = current_year if not last_year_present else "present"
     else:
         has_license_notice = True
         start_year, end_year, wrong_space_format = parse_license_years(
             license_notice.group("years")
         )
-        if (end_year != current_year and not last_year_present) or (
-            end_year != "present" and last_year_present
+        if (
+            (end_year != current_year and not last_year_present)
+            or (end_year != "present" and last_year_present)
+            or (start_year_override is not None and start_year != start_year_override)
         ):
             # The existing license years need to be updated
             must_update_license_notice = True
+            start_year = start_year_override or start_year
             end_year = current_year if not last_year_present else "present"
         else:
             must_update_license_notice = wrong_space_format
     return has_license_notice, must_update_license_notice, start_year, end_year
 
 
-def _main(paths, author, mapping, exclude, dry_run, last_year_present):
+def _main(
+    paths,
+    author,
+    mapping,
+    exclude,
+    dry_run,
+    last_year_present,
+    start_year_override: str | None = None,
+):
     """Check for Apache 2.0 license headers in one or multiple files.
 
     The given paths can be either single files and/or directories that will be searched
@@ -266,6 +283,7 @@ def _main(paths, author, mapping, exclude, dry_run, last_year_present):
                     current_year=current_year,
                     author=author,
                     last_year_present=last_year_present,
+                    start_year_override=start_year_override,
                 )
             )
 
@@ -385,6 +403,17 @@ parser.add_argument(
         "header. If none is provided, the current working directory is used."
     ),
 )
+parser.add_argument(
+    "--start-year",
+    type=int,
+    default=None,
+    help=(
+        "If present, this year will overwrite the start year found in all matched "
+        "scripts. If absent, the existing start year will be preserved, and if there "
+        "is no start year present, the current year (the year at which head_of_apache "
+        "was called) will be used in the license header."
+    ),
+)
 
 
 def main(args=None):
@@ -399,7 +428,20 @@ def main(args=None):
     exclude: list[Path] = parsed_args.exclude
     dry_run: bool = parsed_args.dry_run
     last_year_present: bool = parsed_args.last_year_present
-    return _main(paths, author, mapping, exclude, dry_run, last_year_present)
+    start_year_override: str | None
+    if parsed_args.start_year is not None:
+        start_year_override = str(parsed_args.start_year)
+    else:
+        start_year_override = None
+    return _main(
+        paths,
+        author,
+        mapping,
+        exclude,
+        dry_run,
+        last_year_present,
+        start_year_override=start_year_override,
+    )
 
 
 if __name__ == "__main__":

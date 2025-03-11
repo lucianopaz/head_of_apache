@@ -47,3 +47,5 @@ the given path. Can be specified more than once.
 -d/--dry-run: If present, `head_of_apache` will only print the list of the files that need a license update instead of changing them inplace.
 
 -l/--last-year-present: If present, the end year in the license date range is set to the string "present". If the flag is not supplied, then the current year number will be used in the year range instead.
+
+--start-year: If present, this year will overwrite the start year found in all matched scripts. If absent, the existing start year will be preserved, and if there is no start year present, the current year (the year at which `head_of_apache` was called) will be used in the license header.
