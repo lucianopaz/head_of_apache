@@ -14,6 +14,7 @@
 import pytest
 import tempfile
 import pathlib
+import re
 import os
 from unittest.mock import patch
 
@@ -24,7 +25,9 @@ from head_of_apache.main import (
     validate_file_header,
     _main,
     main,
+    parse_license_years,
     COMMENT_STYLES,
+    DESIRED_LICENSE_NOTICE,
     FILE_TYPE_MAPPING,
     LICENSE_LENGTH,
 )
@@ -77,6 +80,26 @@ def last_year_present(request):
 @pytest.fixture(params=["dry_run", "real_run"])
 def dry_run(request):
     return request.param == "dry_run"
+
+
+@pytest.fixture(scope="function", params=["path", "multi-path", "empty"])
+def cli_path(request):
+    if request.param == "path":
+        with tempfile.TemporaryDirectory() as dir1:
+            yield [dir1]
+    elif request.param == "multi-path":
+        dir1 = tempfile.TemporaryDirectory()
+        dir2 = tempfile.TemporaryDirectory()
+        yield [dir1.name, dir2.name]
+        dir1.cleanup()
+        dir2.cleanup()
+    else:
+        yield []
+
+
+@pytest.fixture(scope="function", params=[None, "1998"])
+def start_year_override(request):
+    return request.param
 
 
 @pytest.fixture(scope="function", params=good_fnames + bad_fnames)
@@ -186,23 +209,40 @@ def test_main(single_file, comment_style, last_year_present, dry_run, capsys):
             assert not must_update_license_notice
 
 
-@pytest.fixture(scope="function", params=["path", "multi-path", "empty"])
-def cli_path(request):
-    if request.param == "path":
-        with tempfile.TemporaryDirectory() as dir1:
-            yield [dir1]
-    elif request.param == "multi-path":
-        dir1 = tempfile.TemporaryDirectory()
-        dir2 = tempfile.TemporaryDirectory()
-        yield [dir1.name, dir2.name]
-        dir1.cleanup()
-        dir2.cleanup()
-    else:
-        yield []
+def test_start_year_override(start_year_override):
+    comment_style = COMMENT_STYLES[FILE_TYPE_MAPPING["py"]]
+    file_content = utils.good_file_old_to_current_year(**comment_style)
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = pathlib.Path(tempdir) / "foo.py"
+        with open(path, "w") as f:
+            f.write(file_content)
+        _main(
+            [path],
+            author=GOOD_AUTHOR,
+            mapping=None,
+            exclude=[],
+            dry_run=False,
+            last_year_present=False,
+            start_year_override=start_year_override,
+        )
+        with open(path, "r") as f:
+            _, first_line, _ = read_file_header_lines(
+                f, comment_style=comment_style, n_lines=LICENSE_LENGTH
+            )
+        if start_year_override is None:
+            assert first_line.rstrip() == file_content.splitlines()[0]
+        else:
+            assert first_line.rstrip() != file_content.splitlines()[0]
+            start_year, *_ = parse_license_years(
+                re.search(DESIRED_LICENSE_NOTICE, first_line).group("years")
+            )
+            assert start_year == start_year_override
 
 
 @patch("head_of_apache.main._main")
-def test_cli(patched_main, cli_path, exclude, dry_run, last_year_present):
+def test_cli(
+    patched_main, cli_path, exclude, dry_run, last_year_present, start_year_override
+):
     args_list = [f"--author {GOOD_AUTHOR}"]
     if exclude is not None:
         args_list.append(f"--exclude {exclude}")
@@ -216,6 +256,8 @@ def test_cli(patched_main, cli_path, exclude, dry_run, last_year_present):
         paths = [pathlib.Path(path) for path in cli_path]
     else:
         paths = [pathlib.Path(os.curdir)]
+    if start_year_override is not None:
+        args_list.append(f"--start-year {start_year_override}")
     args = (" ".join(args_list)).split()
     main(args)
     patched_main.assert_called_once_with(
@@ -225,6 +267,7 @@ def test_cli(patched_main, cli_path, exclude, dry_run, last_year_present):
         [exclude] if exclude is not None else None,
         dry_run,
         last_year_present,
+        start_year_override=start_year_override,
     )
 
 
