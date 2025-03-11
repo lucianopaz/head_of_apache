@@ -198,7 +198,7 @@ def validate_file_header(
     current_year,
     author,
     last_year_present,
-    start_year_override: str | None = None,
+    start_year_override=None,
 ):
     # Check whether license header is missing
     current_year = str(current_year)
@@ -243,7 +243,7 @@ def _main(
     exclude,
     dry_run,
     last_year_present,
-    start_year_override: str | None = None,
+    start_year_override=None,
 ):
     """Check for Apache 2.0 license headers in one or multiple files.
 
@@ -427,7 +427,6 @@ def main(args=None):
     exclude: list[Path] = parsed_args.exclude
     dry_run: bool = parsed_args.dry_run
     last_year_present: bool = parsed_args.last_year_present
-    start_year_override: str | None
     if parsed_args.start_year is not None:
         start_year_override = str(parsed_args.start_year)
     else:
