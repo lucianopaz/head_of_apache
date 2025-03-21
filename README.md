@@ -14,7 +14,7 @@ The hook is intended to the following:
 - Add the Apache 2.0 License header for the desired author and a date range that finishes with the current year or the string "present" to source code files that do not have the Apache 2.0 License header
 - If there's an existing Apache 2.0 License header with another author, it keeps it while prepending a new License header under the desired author and the year range
 - If there's an existing Apache 2.0 License header for the desired author but for an incorrect year range, the year range is updated while keeping the start year of the original license header.
-- Any special shebang or encoding openings are left are they were found.
+- Any special shebang or encoding openings are left as they were found.
 
 To run the pre-commit hook, you must pass the following configuration:
 
